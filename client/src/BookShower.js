@@ -28,7 +28,7 @@ export default class BookShower extends Component {
                   {data.books.map(book => (
                     <li>
                       <strong>{book.title}</strong><br />
-                      by {book.author}
+                      by {book.author.name}
                     </li>
                   ))}
                 </ul>

@@ -5,7 +5,10 @@ export const ADD_BOOK_MUTATION = gql`
     addBook(title: $title, author: $author) {
       _id
       title
-      author
+      author {
+        _id
+        name
+      }
     }
   }
 `
