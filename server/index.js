@@ -1,49 +1,57 @@
 const { ApolloServer, gql } = require('apollo-server');
+const mongoose = require('mongoose')
+const ObjectId = mongoose.Types.ObjectId;
 
-// This is a (sample) collection of books we'll be able to query
-// the GraphQL server for.  A more complete example might fetch
-// from an existing data source like a REST API or database.
-const books = [
-  {
-    title: 'Harry Potter and the Chamber of Secrets',
-    author: 'J.K. Rowling',
-  },
-  {
-    title: 'Jurassic Park',
-    author: 'Michael Crichton',
-  },
-];
+// Convert ObjectID to string
+ObjectId.prototype.valueOf = function () {
+	return this.toString();
+};
 
-// Type definitions define the "shape" of your data and specify
-// which ways the data can be fetched from the GraphQL server.
+mongoose.connect('mongodb://localhost:27017/example-app');
+
+var bookSchema = new mongoose.Schema({
+  title: String,
+  author: String,
+})
+
+const BookModel = mongoose.model('Book', bookSchema);
+
 const typeDefs = gql`
-  # Comments in GraphQL are defined with the hash (#) symbol.
 
-  # This "Book" type can be used in other type declarations.
   type Book {
+    _id: String,
     title: String
     author: String
   }
+  
+  type Mutation {
+    addBook(title: String!, author: String!): Book
+  }
 
-  # The "Query" type is the root of all GraphQL queries.
-  # (A "Mutation" type will be covered later on.)
   type Query {
     books: [Book]
   }
 `;
 
-// Resolvers define the technique for fetching the types in the
-// schema.  We'll retrieve books from the "books" array above.
 const resolvers = {
   Query: {
-    books: () => books,
+    books: async () =>  BookModel.find({}),
   },
+  Mutation: {
+    addBook: async (obj, arg) => BookModel.create({
+      title: arg.title,
+      author: arg.author,
+    })
+  }
 };
 
 // In the most basic sense, the ApolloServer can be started
 // by passing type definitions (typeDefs) and the resolvers
 // responsible for fetching the data for those types.
-const server = new ApolloServer({ typeDefs, resolvers });
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+});
 
 // This `listen` method launches a web-server.  Existing apps
 // can utilize middleware options, which we'll discuss later.

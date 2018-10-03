@@ -26,3 +26,13 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+
+li {
+  background-color: #88aa88;
+  border: 1px solid #666;
+  display: block;
+  margin: 1em 0;
+  max-width: 300px;
+  padding: 20px;
+}
