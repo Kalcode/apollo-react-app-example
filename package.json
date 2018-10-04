@@ -1,0 +1,28 @@
+{
+  "name": "example-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "setup": "yarn setup:client && yarn setup:server",
+    "setup:client": "cd ./client && yarn install",
+    "setup:server": "cd ./server && yarn install",
+    "start:server": "cd ./server && yarn start",
+    "start:client": "cd ./client && yarn start",
+    "start": "concurrently -c \"blue,red\" -n \"SERVER,CLIENT\" \"yarn start:server\" \"yarn start:client\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kalcode/apollo-react-app-example.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kalcode/apollo-react-app-example/issues"
+  },
+  "homepage": "https://github.com/Kalcode/apollo-react-app-example#readme",
+  "dependencies": {
+    "concurrently": "^4.0.1"
+  }
+}
