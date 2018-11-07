@@ -1,4 +1,6 @@
 const { ApolloServer, gql } = require('apollo-server');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 // Mongo Stuff
 const mongoose = require('mongoose')
@@ -19,7 +21,13 @@ const bookSchema = new Schema({
   author: String,
 })
 
+const userSchema = new Schema({
+  username: String,
+  password: String,
+})
+
 const BookModel = mongoose.model('Book', bookSchema)
+const UserModel = mongoose.model('User', userSchema);
 // Seperate 
 
 
@@ -32,13 +40,22 @@ const typeDefs = gql`
     author: String
   }
 
+  type User {
+    _id: String
+    username: String
+    token: String
+  }
+
   type Query {
     books: [Book]
+    login(username: String!, password: String!): User
+    users: [User]
   }
 
   type Mutation {
     addBook(title: String!, author: String!): Book
     deleteBook(_id: String!): Book
+    signup(username: String!, password: String!): User
   }
 `;
 
@@ -46,14 +63,61 @@ const typeDefs = gql`
 const resolvers = {
   Query: {
     books: async () => BookModel.find({}),
+    login: async (obj, arg) => {
+      const user = await UserModel.findOne({ username: arg.username })
+      
+      if (!user) {
+        throw Error('Invalid username or password');
+      }
+
+      const valid = await bcrypt.compare(arg.password, user.password);
+
+      if (!valid) {
+        throw Error('Invalid username or password');
+      }
+
+      const token = jwt.sign({
+        exp: Math.floor(Date.now() / 1000) + (60 * 60),
+        id: user._id,
+        username: user.username,
+      }, 'secret');
+
+      user.token = token;
+
+      return user
+    },
+    users: async () => UserModel.find({}).select('-password'),
   },
   Mutation: {
-    // addBook: async (obj, arg, context) => {
-    //   const book = new BookModel({ title: arg.title, author: arg.author })
-    //   return book.save();
-    // }
-    addBook: async (obj, arg) => BookModel.create({ title: arg.title, author: arg.author}),
-    deleteBook: async (obj, arg) => BookModel.deleteOne({ _id: arg._id })
+    addBook: async (obj, arg) => {
+      return BookModel.create({ title: arg.title, author: arg.author})
+    },
+    deleteBook: async (obj, arg) => BookModel.deleteOne({ _id: arg._id }),
+    signup: async (obj, arg) => {
+      const userExist = await UserModel.findOne({ username: arg.username })
+
+      if (userExist) {
+        throw Error('Invalid username');
+      }
+
+      const password = await bcrypt.hash(arg.password, 10);      
+
+      const user = await UserModel.create({
+          username: arg.username,
+          password,
+        })
+        
+        
+      const token = jwt.sign({
+        exp: Math.floor(Date.now() / 1000) + (60 * 60),
+        id: user._id,
+        username: user.username,
+      }, 'secret');
+        
+      user.token = token
+
+      return user
+    }
   }
 };
 
