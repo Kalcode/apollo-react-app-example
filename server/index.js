@@ -57,13 +57,13 @@ const typeDefs = gql`
 
   type Query {
     books: [Book]
-    login(username: String!, password: String!): User
     users: [User]
   }
 
   type Mutation {
     addBook(title: String!, author: String!): Book
     deleteBook(_id: String!): Book
+    login(username: String!, password: String!): User
     signup(username: String!, password: String!): User
   }
 `;
@@ -73,12 +73,21 @@ const resolvers = {
   Query: {
     books: async (obj, arg, context) => {
       if (!context.user) {
-        throw Error('Unauthorized User, Cops have been called');
+        return [];
       }
 
       return BookModel.find({})
     },
+    users: async () => UserModel.find({}).select('-password'),
+  },
+  Mutation: {
+    addBook: async (obj, arg) => {
+      return BookModel.create({ title: arg.title, author: arg.author})
+    },
+    deleteBook: async (obj, arg) => BookModel.deleteOne({ _id: arg._id }),
     login: async (obj, arg) => {
+      console.log('attempting to login');
+
       const user = await UserModel.findOne({ username: arg.username })
       
       if (!user) {
@@ -104,13 +113,6 @@ const resolvers = {
 
       return user
     },
-    users: async () => UserModel.find({}).select('-password'),
-  },
-  Mutation: {
-    addBook: async (obj, arg) => {
-      return BookModel.create({ title: arg.title, author: arg.author})
-    },
-    deleteBook: async (obj, arg) => BookModel.deleteOne({ _id: arg._id }),
     signup: async (obj, arg) => {
       const userExist = await UserModel.findOne({ username: arg.username })
 
