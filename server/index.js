@@ -1,6 +1,15 @@
-const { ApolloServer, gql } = require('apollo-server');
+const express = require('express')
+const { ApolloServer, gql } = require('apollo-server-express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const jwtAuth = require('express-jwt');
+
+const app = express();
+
+app.use(jwtAuth({
+  secret: 'secret',
+  credentialsRequired: false,
+}))
 
 // Mongo Stuff
 const mongoose = require('mongoose')
@@ -62,7 +71,13 @@ const typeDefs = gql`
 // Map Resolvers
 const resolvers = {
   Query: {
-    books: async () => BookModel.find({}),
+    books: async (obj, arg, context) => {
+      if (!context.user) {
+        throw Error('Unauthorized User, Cops have been called');
+      }
+
+      return BookModel.find({})
+    },
     login: async (obj, arg) => {
       const user = await UserModel.findOne({ username: arg.username })
       
@@ -76,11 +91,14 @@ const resolvers = {
         throw Error('Invalid username or password');
       }
 
-      const token = jwt.sign({
-        exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      const token = jwt.sign(
+      {
         id: user._id,
         username: user.username,
-      }, 'secret');
+      },
+        'secret',
+        { expiresIn: '1s' },
+      );
 
       user.token = token;
 
@@ -109,10 +127,12 @@ const resolvers = {
         
         
       const token = jwt.sign({
-        exp: Math.floor(Date.now() / 1000) + (60 * 60),
         id: user._id,
         username: user.username,
-      }, 'secret');
+      },
+      'secret',
+      { expiresIn: '1d' },
+      );
         
       user.token = token
 
@@ -123,8 +143,16 @@ const resolvers = {
 
 
 // Start Server
-const server = new ApolloServer({ typeDefs, resolvers });
-
-server.listen().then(({ url }) => {
-  console.log(`🚀  Server ready at ${url}`);
+const server = new ApolloServer({ 
+  typeDefs,
+  resolvers,
+  context: ({ req }) => ({
+    user: req.user,
+  })
 });
+
+server.applyMiddleware({ app })
+
+app.listen({ port: 4000 }, () =>
+  console.log(`🚀 Server ready at http://localhost:4000${server.graphqlPath}`)
+)
